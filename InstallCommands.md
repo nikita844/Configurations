@@ -13,6 +13,10 @@ sudo -i -u postgres
 sudo -u postgres createuser --interactive
 
 
+
+
+
+
 #Move data directory to Mounting drive
 
 sudo -u postgres psql
