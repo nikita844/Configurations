@@ -1,0 +1,559 @@
+--
+-- PostgreSQL database dump
+--
+
+-- Dumped from database version 9.3.17
+-- Dumped by pg_dump version 9.4.4
+-- Started on 2017-07-18 14:04:23
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SET check_function_bodies = false;
+SET client_min_messages = warning;
+
+--
+-- TOC entry 174 (class 3079 OID 11757)
+-- Name: plpgsql; Type: EXTENSION; Schema: -; Owner: 
+--
+
+CREATE EXTENSION IF NOT EXISTS plpgsql WITH SCHEMA pg_catalog;
+
+
+--
+-- TOC entry 1984 (class 0 OID 0)
+-- Dependencies: 174
+-- Name: EXTENSION plpgsql; Type: COMMENT; Schema: -; Owner: 
+--
+
+COMMENT ON EXTENSION plpgsql IS 'PL/pgSQL procedural language';
+
+
+SET search_path = public, pg_catalog;
+
+--
+-- TOC entry 188 (class 1255 OID 16408)
+-- Name: devicedata_logs_partition_function(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION devicedata_logs_partition_function() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $_$
+DECLARE
+_tablename text;
+_startdate text;
+_enddate text;
+_result record;
+BEGIN
+--Takes the current inbound "time" value and determines when midnight is for the given date
+--_new_time := ((CURRENT_TIMESTAMP/86400)::int)*86400;
+--_startdate := to_char(to_timestamp(_new_time), 'YYYY-MM-DD');
+--_startdate := to_char(CURRENT_TIMESTAMP, 'YYYY-MM-DD');
+_startdate := NEW."datatimestamp"::timestamp::date;
+_tablename := 'devicedata_logs_'||NEW.clientport||'_'||_startdate;
+
+-- Check if the partition needed for the current record exists
+PERFORM 1
+FROM   pg_catalog.pg_class c
+JOIN   pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+WHERE  c.relkind = 'r'
+AND    c.relname = _tablename
+AND    n.nspname = 'public';
+
+-- If the partition needed does not yet exist, then we create it:
+-- Note that || is string concatenation (joining two strings to make one)
+IF NOT FOUND THEN
+_enddate:=_startdate::timestamp + INTERVAL '1 day';
+EXECUTE 'CREATE TABLE ' || quote_ident(_tablename) || ' (
+CHECK ( "datatimestamp" >= DATE ' || quote_literal(_startdate) || ' 
+AND "datatimestamp" < DATE ' || quote_literal(_enddate) || ' 
+)
+) INHERITS (devicedata_logs)';
+
+-- Table permissions are not inherited from the parent.
+-- If permissions change on the master be sure to change them on the child also.
+EXECUTE 'ALTER TABLE ' || quote_ident(_tablename) || ' OWNER TO postgres';
+EXECUTE 'GRANT ALL ON TABLE ' || quote_ident(_tablename) || ' TO postgres';
+
+-- Indexes are defined per child, so we assign a default index that uses the partition columns
+EXECUTE 'CREATE INDEX ' || quote_ident(_tablename||'_indx1') || ' ON ' || quote_ident(_tablename) || ' (dataTimestamp, recordID)';
+END IF;
+
+-- Insert the current record into the correct partition, which we are sure will now exist.
+EXECUTE 'INSERT INTO ' || quote_ident(_tablename) || ' VALUES ($1.*)' USING NEW;
+RETURN NULL;
+END;
+$_$;
+
+
+ALTER FUNCTION public.devicedata_logs_partition_function() OWNER TO postgres;
+
+--
+-- TOC entry 189 (class 1255 OID 16409)
+-- Name: parsed_device_alert_record_partition_function(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION parsed_device_alert_record_partition_function() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $_$
+DECLARE
+_tablename text;
+_startdate text;
+_enddate text;
+_result record;
+BEGIN
+--Takes the current inbound "time" value and determines when midnight is for the given date
+--_new_time := ((CURRENT_TIMESTAMP/86400)::int)*86400;
+--_startdate := to_char(to_timestamp(_new_time), 'YYYY-MM-DD');
+--_startdate := to_char(CURRENT_TIMESTAMP, 'YYYY-MM-DD');
+_startdate := NEW."datatimestamp"::timestamp::date;
+_tablename := 'parsed_device_alert_record_'||_startdate;
+
+-- Check if the partition needed for the current record exists
+PERFORM 1
+FROM   pg_catalog.pg_class c
+JOIN   pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+WHERE  c.relkind = 'r'
+AND    c.relname = _tablename
+AND    n.nspname = 'public';
+
+-- If the partition needed does not yet exist, then we create it:
+-- Note that || is string concatenation (joining two strings to make one)
+IF NOT FOUND THEN
+_enddate:=_startdate::timestamp + INTERVAL '1 day';
+EXECUTE 'CREATE TABLE ' || quote_ident(_tablename) || ' (
+CHECK ( "datatimestamp" >= DATE ' || quote_literal(_startdate) || ' 
+AND "datatimestamp" < DATE ' || quote_literal(_enddate) || ' 
+)
+) INHERITS (parsed_device_alert_record)';
+
+-- Table permissions are not inherited from the parent.
+-- If permissions change on the master be sure to change them on the child also.
+EXECUTE 'ALTER TABLE ' || quote_ident(_tablename) || ' OWNER TO postgres';
+EXECUTE 'GRANT ALL ON TABLE ' || quote_ident(_tablename) || ' TO postgres';
+
+-- Indexes are defined per child, so we assign a default index that uses the partition columns
+EXECUTE 'CREATE INDEX ' || quote_ident(_tablename||'_indx1') || ' ON ' || quote_ident(_tablename) || ' (dataTimestamp, recordID)';
+END IF;
+
+-- Insert the current record into the correct partition, which we are sure will now exist.
+EXECUTE 'INSERT INTO ' || quote_ident(_tablename) || ' VALUES ($1.*)' USING NEW;
+RETURN NULL;
+END;
+$_$;
+
+
+ALTER FUNCTION public.parsed_device_alert_record_partition_function() OWNER TO postgres;
+
+--
+-- TOC entry 190 (class 1255 OID 16410)
+-- Name: parsed_device_health_record_partition_function(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION parsed_device_health_record_partition_function() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $_$
+DECLARE
+_tablename text;
+_startdate text;
+_enddate text;
+_result record;
+BEGIN
+--Takes the current inbound "time" value and determines when midnight is for the given date
+--_new_time := ((CURRENT_TIMESTAMP/86400)::int)*86400;
+--_startdate := to_char(to_timestamp(_new_time), 'YYYY-MM-DD');
+--_startdate := to_char(CURRENT_TIMESTAMP, 'YYYY-MM-DD');
+_startdate := NEW."datatimestamp"::timestamp::date;
+_tablename := 'parsed_device_health_record_'||_startdate;
+
+-- Check if the partition needed for the current record exists
+PERFORM 1
+FROM   pg_catalog.pg_class c
+JOIN   pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+WHERE  c.relkind = 'r'
+AND    c.relname = _tablename
+AND    n.nspname = 'public';
+
+-- If the partition needed does not yet exist, then we create it:
+-- Note that || is string concatenation (joining two strings to make one)
+IF NOT FOUND THEN
+_enddate:=_startdate::timestamp + INTERVAL '1 day';
+EXECUTE 'CREATE TABLE ' || quote_ident(_tablename) || ' (
+CHECK ( "datatimestamp" >= DATE ' || quote_literal(_startdate) || ' 
+AND "datatimestamp" < DATE ' || quote_literal(_enddate) || ' 
+)
+) INHERITS (parsed_device_health_record)';
+
+-- Table permissions are not inherited from the parent.
+-- If permissions change on the master be sure to change them on the child also.
+EXECUTE 'ALTER TABLE ' || quote_ident(_tablename) || ' OWNER TO postgres';
+EXECUTE 'GRANT ALL ON TABLE ' || quote_ident(_tablename) || ' TO postgres';
+
+-- Indexes are defined per child, so we assign a default index that uses the partition columns
+EXECUTE 'CREATE INDEX ' || quote_ident(_tablename||'_indx1') || ' ON ' || quote_ident(_tablename) || ' (dataTimestamp, recordID)';
+END IF;
+
+-- Insert the current record into the correct partition, which we are sure will now exist.
+EXECUTE 'INSERT INTO ' || quote_ident(_tablename) || ' VALUES ($1.*)' USING NEW;
+RETURN NULL;
+END;
+$_$;
+
+
+ALTER FUNCTION public.parsed_device_health_record_partition_function() OWNER TO postgres;
+
+--
+-- TOC entry 191 (class 1255 OID 16411)
+-- Name: parsed_device_record_partition_function(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION parsed_device_record_partition_function() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $_$
+DECLARE
+_tablename text;
+_new_time int;
+_startdate text;
+_enddate text;
+_result record;
+BEGIN
+--Takes the current inbound "time" value and determines when midnight is for the given date
+--EXECUTE 'SELECT ($1).' || "datatimestamp" || '::timestamp' INTO NEW_TIME USING NEW;
+--_new_time := ((NEW."datatimestamp"/86400)::int)*86400;
+_startdate := NEW."datatimestamp"::timestamp::date;
+--_startdate := to_char(CURRENT_TIMESTAMP, 'YYYY-MM-DD');
+_tablename := 'parsed_device_record_'||_startdate;
+
+-- Check if the partition needed for the current record exists
+PERFORM 1
+FROM   pg_catalog.pg_class c
+JOIN   pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+WHERE  c.relkind = 'r'
+AND    c.relname = _tablename
+AND    n.nspname = 'public';
+
+-- If the partition needed does not yet exist, then we create it:
+-- Note that || is string concatenation (joining two strings to make one)
+IF NOT FOUND THEN
+_enddate:=_startdate::timestamp + INTERVAL '1 day';
+EXECUTE 'CREATE TABLE ' || quote_ident(_tablename) || ' (
+CHECK ( "datatimestamp" >= DATE ' || quote_literal(_startdate) || ' 
+AND "datatimestamp" < DATE ' || quote_literal(_enddate) || ' 
+)
+) INHERITS (parsed_device_record)';
+
+-- Table permissions are not inherited from the parent.
+-- If permissions change on the master be sure to change them on the child also.
+EXECUTE 'ALTER TABLE ' || quote_ident(_tablename) || ' OWNER TO postgres';
+EXECUTE 'GRANT ALL ON TABLE ' || quote_ident(_tablename) || ' TO postgres';
+
+-- Indexes are defined per child, so we assign a default index that uses the partition columns
+EXECUTE 'CREATE INDEX ' || quote_ident(_tablename||'_indx1') || ' ON ' || quote_ident(_tablename) || ' (datatimestamp, recordid)';
+END IF;
+
+-- Insert the current record into the correct partition, which we are sure will now exist.
+EXECUTE 'INSERT INTO ' || quote_ident(_tablename) || ' VALUES ($1.*)' USING NEW;
+RETURN NULL;
+END;
+$_$;
+
+
+ALTER FUNCTION public.parsed_device_record_partition_function() OWNER TO postgres;
+
+--
+-- TOC entry 192 (class 1255 OID 16412)
+-- Name: parsed_loc_device_record_partition_function(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION parsed_loc_device_record_partition_function() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $_$
+DECLARE
+_tablename text;
+_new_time int;
+_startdate text;
+_enddate text;
+_result record;
+BEGIN
+--Takes the current inbound "time" value and determines when midnight is for the given date
+--EXECUTE 'SELECT ($1).' || "datatimestamp" || '::timestamp' INTO NEW_TIME USING NEW;
+--_new_time := ((NEW."datatimestamp"/86400)::int)*86400;
+_startdate := NEW."datatimestamp"::timestamp::date;
+--_startdate := to_char(CURRENT_TIMESTAMP, 'YYYY-MM-DD');
+_tablename := 'parsed_loc_device_record_'||_startdate;
+
+-- Check if the partition needed for the current record exists
+PERFORM 1
+FROM   pg_catalog.pg_class c
+JOIN   pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+WHERE  c.relkind = 'r'
+AND    c.relname = _tablename
+AND    n.nspname = 'public';
+
+-- If the partition needed does not yet exist, then we create it:
+-- Note that || is string concatenation (joining two strings to make one)
+IF NOT FOUND THEN
+_enddate:=_startdate::timestamp + INTERVAL '1 day';
+EXECUTE 'CREATE TABLE ' || quote_ident(_tablename) || ' (
+CHECK ( "datatimestamp" >= DATE ' || quote_literal(_startdate) || ' 
+AND "datatimestamp" < DATE ' || quote_literal(_enddate) || ' 
+)
+) INHERITS (parsed_loc_device_record)';
+
+-- Table permissions are not inherited from the parent.
+-- If permissions change on the master be sure to change them on the child also.
+EXECUTE 'ALTER TABLE ' || quote_ident(_tablename) || ' OWNER TO postgres';
+EXECUTE 'GRANT ALL ON TABLE ' || quote_ident(_tablename) || ' TO postgres';
+
+-- Indexes are defined per child, so we assign a default index that uses the partition columns
+EXECUTE 'CREATE INDEX ' || quote_ident(_tablename||'_indx1') || ' ON ' || quote_ident(_tablename) || ' (datatimestamp, imeino)';
+END IF;
+
+-- Insert the current record into the correct partition, which we are sure will now exist.
+EXECUTE 'INSERT INTO ' || quote_ident(_tablename) || ' VALUES ($1.*)' USING NEW;
+RETURN NULL;
+END;
+$_$;
+
+
+ALTER FUNCTION public.parsed_loc_device_record_partition_function() OWNER TO postgres;
+
+--
+-- TOC entry 181 (class 1255 OID 16407)
+-- Name: uuid_generate_v4(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION uuid_generate_v4() RETURNS uuid
+    LANGUAGE c STRICT
+    AS '$libdir/uuid-ossp', 'uuid_generate_v4';
+
+
+ALTER FUNCTION public.uuid_generate_v4() OWNER TO postgres;
+
+SET default_tablespace = '';
+
+SET default_with_oids = false;
+
+--
+-- TOC entry 170 (class 1259 OID 16395)
+-- Name: connected_device_master; Type: TABLE; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE TABLE connected_device_master (
+    imeino character varying(15) NOT NULL,
+    reactorkey character varying(128) NOT NULL,
+    clientkey character varying(128) NOT NULL,
+    packetdate date,
+    packettime time without time zone,
+    updatedtimestamp timestamp without time zone DEFAULT now() NOT NULL,
+    vehicleid character varying(20),
+    latitude numeric(10,5),
+    latitudedirection character(2),
+    longitude numeric(10,5),
+    longitudedirection character(2),
+    vehiclespeed numeric(10,3),
+    vehicledirection numeric(10,3),
+    gpsstatus character(2),
+    ignumber integer,
+    tamperstatus character varying(20),
+    packettype character varying,
+    networkoperator character varying,
+    port integer,
+    firmwareversion character varying,
+    satellite numeric,
+    altitude numeric,
+    pdop numeric,
+    distancekm numeric,
+    batteryvoltage numeric,
+    emergency character varying,
+    gsmsignal character varying,
+    mcc character varying,
+    mnc character varying,
+    lac character varying,
+    cellid character varying,
+    nmr character varying,
+    digitalipstatus character varying,
+    digitalopstatus character varying,
+    frameno character varying
+);
+
+
+ALTER TABLE connected_device_master OWNER TO postgres;
+
+--
+-- TOC entry 171 (class 1259 OID 16413)
+-- Name: devicedata_logs; Type: TABLE; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE TABLE devicedata_logs (
+    recordid uuid DEFAULT uuid_generate_v4() NOT NULL,
+    datatimestamp timestamp with time zone DEFAULT now() NOT NULL,
+    datamessage character varying,
+    clientfqdn character varying(128),
+    clientport integer
+);
+
+
+ALTER TABLE devicedata_logs OWNER TO postgres;
+
+--
+-- TOC entry 172 (class 1259 OID 16424)
+-- Name: devicedata_logs_exception; Type: TABLE; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE TABLE devicedata_logs_exception (
+    recordid uuid DEFAULT uuid_generate_v4() NOT NULL,
+    datatimestamp timestamp with time zone DEFAULT now() NOT NULL,
+    datamessage character varying NOT NULL,
+    clientfqdn character varying(128),
+    clientport integer
+);
+
+
+ALTER TABLE devicedata_logs_exception OWNER TO postgres;
+
+--
+-- TOC entry 173 (class 1259 OID 16434)
+-- Name: parsed_loc_device_record; Type: TABLE; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE TABLE parsed_loc_device_record (
+    recordid uuid DEFAULT uuid_generate_v4() NOT NULL,
+    datatimestamp timestamp with time zone DEFAULT now() NOT NULL,
+    packettype character(20) NOT NULL,
+    imeino character varying(20) NOT NULL,
+    cellid character varying(20),
+    gpsstatus character(2),
+    packetdate date,
+    packettime time without time zone,
+    latitude numeric(10,5),
+    latitudedirection character(2),
+    longitude numeric(10,5),
+    longitudedirection character(2),
+    vehiclespeed numeric(10,3),
+    vehicledirection numeric(10,3),
+    gsmsignal character varying(20),
+    satellite character varying(20),
+    batteryvoltage numeric(5,2),
+    ignumber integer,
+    digitalipstatus character varying,
+    tamperstatus character varying(20),
+    analogipvoltage character varying,
+    swversion character varying(20),
+    distancekm integer,
+    address character varying(20),
+    rfidheader character varying(20),
+    rfidserialnumber character varying(20),
+    vendorid character varying,
+    firmwareversion character varying,
+    packetstatus character varying,
+    altitude character varying,
+    pdop character varying,
+    networkoperator character varying,
+    emergency character varying,
+    mcc character varying,
+    mnc character varying,
+    nmr character varying,
+    digitalopstatus character varying,
+    port character varying
+);
+
+
+ALTER TABLE parsed_loc_device_record OWNER TO postgres;
+
+--
+-- TOC entry 1857 (class 2606 OID 16403)
+-- Name: connected_device_master_pkey_3; Type: CONSTRAINT; Schema: public; Owner: postgres; Tablespace: 
+--
+
+ALTER TABLE ONLY connected_device_master
+    ADD CONSTRAINT connected_device_master_pkey_3 PRIMARY KEY (imeino);
+
+
+--
+-- TOC entry 1862 (class 2606 OID 16422)
+-- Name: devicedata_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres; Tablespace: 
+--
+
+ALTER TABLE ONLY devicedata_logs
+    ADD CONSTRAINT devicedata_logs_pkey PRIMARY KEY (datatimestamp, recordid);
+
+
+--
+-- TOC entry 1864 (class 2606 OID 16433)
+-- Name: devicedata_logs_pkey1; Type: CONSTRAINT; Schema: public; Owner: postgres; Tablespace: 
+--
+
+ALTER TABLE ONLY devicedata_logs_exception
+    ADD CONSTRAINT devicedata_logs_pkey1 PRIMARY KEY (datatimestamp, datamessage);
+
+
+--
+-- TOC entry 1867 (class 2606 OID 16443)
+-- Name: parsed_loc_device_record_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres; Tablespace: 
+--
+
+ALTER TABLE ONLY parsed_loc_device_record
+    ADD CONSTRAINT parsed_loc_device_record_pkey PRIMARY KEY (datatimestamp, recordid);
+
+
+--
+-- TOC entry 1860 (class 2606 OID 16405)
+-- Name: uniqueimei; Type: CONSTRAINT; Schema: public; Owner: postgres; Tablespace: 
+--
+
+ALTER TABLE ONLY connected_device_master
+    ADD CONSTRAINT uniqueimei UNIQUE (imeino, updatedtimestamp);
+
+
+--
+-- TOC entry 1858 (class 1259 OID 16406)
+-- Name: imeiindex; Type: INDEX; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE INDEX imeiindex ON connected_device_master USING btree (imeino, packetdate, port);
+
+
+--
+-- TOC entry 1865 (class 1259 OID 16444)
+-- Name: ix_testing; Type: INDEX; Schema: public; Owner: postgres; Tablespace: 
+--
+
+CREATE INDEX ix_testing ON parsed_loc_device_record USING btree (datatimestamp);
+
+
+--
+-- TOC entry 1868 (class 2620 OID 16423)
+-- Name: devicedata_logs_trigger; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER devicedata_logs_trigger BEFORE INSERT ON devicedata_logs FOR EACH ROW EXECUTE PROCEDURE devicedata_logs_partition_function();
+
+
+--
+-- TOC entry 1869 (class 2620 OID 16445)
+-- Name: parsed_loc_device_record_trigger; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER parsed_loc_device_record_trigger BEFORE INSERT ON parsed_loc_device_record FOR EACH ROW EXECUTE PROCEDURE parsed_loc_device_record_partition_function();
+
+
+--
+-- TOC entry 1983 (class 0 OID 0)
+-- Dependencies: 5
+-- Name: public; Type: ACL; Schema: -; Owner: postgres
+--
+
+REVOKE ALL ON SCHEMA public FROM PUBLIC;
+REVOKE ALL ON SCHEMA public FROM postgres;
+GRANT ALL ON SCHEMA public TO postgres;
+GRANT ALL ON SCHEMA public TO PUBLIC;
+
+
+-- Completed on 2017-07-18 14:05:20
+
+--
+-- PostgreSQL database dump complete
+--
+
