@@ -42,3 +42,11 @@ service postgresql status
 sudo -u postgres psql
 
 SHOW data_directory;
+
+
+
+
+#install PostGis
+
+
+sudo apt-get install -y postgis postgresql-9.3-postgis-2.1
