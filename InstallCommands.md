@@ -44,6 +44,12 @@ sudo -u postgres psql
 SHOW data_directory;
 
 
+#set password
+
+sudo -u postgres psql postgres
+
+\password postgres
+
 
 
 #install PostGis
