@@ -86,8 +86,11 @@ rabbitmq-plugins enable rabbitmq_management
 
 
 #add User in rabbitmq
+
 rabbitmqctl add_user newadmin s0m3p4ssw0rd
+
 rabbitmqctl set_user_tags newadmin administrator
+
 rabbitmqctl set_permissions -p / newadmin ".*" ".*" ".*"
 
      
