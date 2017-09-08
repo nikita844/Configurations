@@ -56,3 +56,39 @@ sudo -u postgres psql postgres
 
 
 sudo apt-get install -y postgis postgresql-9.3-postgis-2.1
+
+
+
+#install rabbitmq
+
+wget https://packages.erlang-solutions.com/erlang-solutions_1.0_all.deb
+
+sudo dpkg -i erlang-solutions_1.0_all.deb
+
+sudo apt-get update
+
+sudo apt-get install erlang
+
+echo 'deb http://www.rabbitmq.com/debian/ testing main' |
+     sudo tee /etc/apt/sources.list.d/rabbitmq.list
+     
+wget -O- https://www.rabbitmq.com/rabbitmq-release-signing-key.asc |
+     sudo apt-key add -
+     
+     
+sudo apt-get update
+     
+     
+sudo apt-get install rabbitmq-server
+
+
+rabbitmq-plugins enable rabbitmq_management
+
+
+#add User in rabbitmq
+rabbitmqctl add_user newadmin s0m3p4ssw0rd
+rabbitmqctl set_user_tags newadmin administrator
+rabbitmqctl set_permissions -p / newadmin ".*" ".*" ".*"
+
+     
+
