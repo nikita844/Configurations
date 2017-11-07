@@ -93,5 +93,20 @@ rabbitmqctl set_user_tags newadmin administrator
 
 rabbitmqctl set_permissions -p / newadmin ".*" ".*" ".*"
 
-     
+
+#Mount External HDD
+
+sudo blkid
+
+sudo mkdir /media/Data
+
+
+sudo cp /etc/fstab /etc/fstab.orig
+
+vi /etc/fstab
+(Add Below line in this file and change uui according to blkid command)
+UUID=519CB82E5888AD0F  /media/Data  ntfs-3g  defaults,windows_names,locale=en_US.utf8  0 0
+
+
+sudo mount -a
 
